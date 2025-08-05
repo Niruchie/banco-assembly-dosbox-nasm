@@ -1,0 +1,28 @@
+{
+	"files.exclude": {
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/.DS_Store": true,
+		"**/Thumbs.db": true,
+		"**/.classpath": true,
+		"**/.factorypath": true,
+		"**/.project": true,
+		"**/.settings": true,
+		"**\\cwsdpmi.doc": true,
+		"*.doc": true,
+		"cwsdpmi.doc": true,
+		"**\\*.doc": true,
+		"*.exe": true,
+		"**\\*.exe": true,
+		"*.txt": true,
+		"**\\*.txt": true,
+		"*.COM": true,
+		"**\\*.COM": true,
+		"**\\LICENSE": true,
+		"**\\README": true,
+		"README": true,
+		"LICENSE": true
+	},
+	"explorerExclude.backup": {}
+}
