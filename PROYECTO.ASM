@@ -62,7 +62,7 @@ section .text
 _start:
     jmp menu_loop
 
-; ------------------------------------------------
+;-------------------------------------------------
 ; display_menu
 ;
 ; Muestra el menú principal, por medio de 
@@ -71,7 +71,7 @@ _start:
 ; DX = * Puntero a la cadena a mostrar
 ; AH = 09h (función de imprimir cadena de DOS)
 ; INT 21h - Llamada al sistema operativo 
-; ------------------------------------------------
+;-------------------------------------------------
 display_menu:
     mov dx, titulo_banco_msg
     mov ah, 9
@@ -109,97 +109,110 @@ display_menu:
 ; INT 21h - Llamada al sistema operativo
 ;-------------------------------------------------
 get_option:
-    mov ah, 1
+    mov ah, 1                                     ; Esperar una tecla
     int 21h
     sub al, '0'                                   ; Convertir ASCII a número
     ret
 
-
+;-------------------------------------------------
+; invalid_option
+;
+; Maneja la opción inválida
+; 
+;-------------------------------------------------
 invalid_option:
-    mov dx, opcion_invalida_prompt
+    mov dx, opcion_invalida_prompt                ; Imprimir opción inválida
     mov ah, 9
     int 21h
-    jmp return_to_menu
+
+    jmp return_to_menu                            ; Salto: volver al menú
+
+;-------------------------------------------------
+; return_to_menu
+;
+; Espera a que el usuario presione Enter
+; para volver al menú principal.
+;-------------------------------------------------
 return_to_menu:
-    mov dx, menu_returno_msg
+    mov dx, menu_returno_msg                      ; Imprimir mensaje de retorno
     mov ah, 9
     int 21h
-    mov ah, 1
+
+    mov ah, 1                                     ; Esperar una tecla
     int 21h
-    jmp menu_loop
+
+    jmp menu_loop                                 ; Salto: volver menú opciones
+
+;-------------------------------------------------
+; menu_loop
+;
+; Bucle principal del menú
+;-------------------------------------------------
 menu_loop:
-    call clear_screen
-    call display_menu
-    call get_option
-    
-    ; Compare with options and jump to the correct handler
-    cmp al, 1
-    je create_account
-    cmp al, 2
+    call clear_screen                             ; Limpiar pantalla
+    call display_menu                             ; Mostrar menú
+    call get_option                               ; Obtener opción del usuario
+
+    cmp al, 1                                     ; Comparar opción (foreach)
+    je create_account                             ;   CMP = AL - OPTION
+    cmp al, 2                                     ;   AL == #OPTION ? ZF = 1
     je view_account
-    cmp al, 3
-    je edit_account
-    cmp al, 4
-    je retirar_dinero
-    cmp al, 5
-    je depositar_dinero
-    cmp al, 6
-    je exit_program
+    cmp al, 3                                     ; foreach (OPT in OPTIONS)
+    je edit_account                               ;   CMP = AL - OPTION
+    cmp al, 4                                     ;   if (CMP == 0) ZF = 1
+    je retirar_dinero                             ;   if (ZF == 1)
+    cmp al, 5                                     ;     proceso()
+    je depositar_dinero                           ;     break
+    cmp al, 6                                     ; invalido()
 
-    ; If not a valid option, fall through to invalid_option
-    jmp invalid_option
-    
-; # endregion
+    jmp invalid_option                            ; Salto: opción inválida
 
-
-
-
+;-------------------------------------------------
+; create_account
+;
+; Crea una nueva cuenta bancaria
+;-------------------------------------------------
 create_account:
-    ; Check if account already exists
-    call check_account_exists
-    cmp al, 1
-    je account_exists
+    call check_account_exists                     ; Subrutina: verificar cuenta
+    cmp al, 1                                     ; out Al = 1 | si existe
+    je account_exists                             ; Salto: cuenta ya existe
 
-    ; Prompt for account name
-    mov dx, ingresar_nombre_prompt
+    mov dx, ingresar_nombre_prompt                ; Pedir nombre de cuenta
     mov ah, 9
     int 21h
 
-    ; Read account name
-    mov cx, 20 ; Max 20 characters
-    mov dx, cuenta_nombre_store
-    call store_string_to_address
+    mov cx, 20                                    ; CX = 20 | 20 caracteres
+    mov dx, cuenta_nombre_store                   ; DX = * Puntero al storage
+    call store_string_to_address                  ; Subrutina: Guardar entrada
 
-    ; Prompt for account PIN
-    mov dx, ingresar_pin_prompt
+    mov dx, ingresar_pin_prompt                   ; Pedir PIN de cuenta
     mov ah, 9
     int 21h
 
-    ; Read account PIN
-    mov cx, 4 ; 4 digits for PIN
-    mov dx, cuenta_pin_store
-    call store_string_to_address
+    mov cx, 4                                     ; CX = 4 | 4 dígitos
+    mov dx, cuenta_pin_store                      ; DX = * Puntero al storage
+    call store_string_to_address                  ; Subrutina: Guardar entrada
 
-    ; Initialize account balance to 0
-    mov dword [cuenta_balance_store], 0
+    mov dword [cuenta_balance_store], 0           ; Inicializar saldo a 0
+    call activate_account                         ; Subrutina: Activar cuenta
 
-    ; Set account exists flag
-    call activate_account
-    jmp return_to_menu
+    jmp return_to_menu                            ; Salto: volver al menú
 
+;-------------------------------------------------
+; view_account
+;
+; Muestra los detalles de la cuenta
+;-------------------------------------------------
 view_account:
-    ; Check if account exists
-    call check_account_exists
-    cmp al, 0
-    je account_not_exists
+    call check_account_exists                     ; Subrutina: verificar cuenta
+    cmp al, 0                                     ; out Al = 0 | si no existe
+    je account_not_exists                         ; Salto: cuenta no existe
 
-    ; Display account details
-    mov dx, titulo_detalles_msg
+    mov dx, titulo_detalles_msg                   ; Mostrar título detalles
     mov ah, 9
     int 21h
 
-    ; Account Name
-    mov dx, cuenta_nombre_label
+    mov dx, cuenta_nombre_label                   ; Mostrar nombre cuenta
     mov ah, 9
     int 21h
 
@@ -207,157 +220,153 @@ view_account:
     mov ah, 9
     int 21h
 
-    ; Account PIN
-    mov dx, cuenta_pin_label
+    mov dx, cuenta_pin_label                      ; Mostrar PIN cuenta
     mov ah, 9
     int 21h
-    
+
     mov dx, cuenta_pin_store
     mov ah, 9
     int 21h
 
-    ; Account Balance
-    mov dx, cuenta_balance_label
-    mov ah, 9
-    int 21h
-    
-    mov ax, [cuenta_balance_store]
-    mov si, buffer_entrada_numero
-    call number_to_string
-    mov dx, buffer_entrada_numero
+    mov dx, cuenta_balance_label                  ; Mostrar saldo cuenta
     mov ah, 9
     int 21h
 
-    jmp return_to_menu
+    mov ax, [cuenta_balance_store]                ; AX = <saldo>
+    mov si, buffer_entrada_numero                 ; SI = * Puntero al buffer
+    call number_to_string                         ; Subrutina: número a texto
 
+    mov dx, buffer_entrada_numero                 ; Mostrar saldo como texto
+    mov ah, 9
+    int 21h
+
+    jmp return_to_menu                            ; Salto: volver al menú
+
+;-------------------------------------------------
+; edit_account
+;
+; Edita los detalles de la cuenta
+;-------------------------------------------------
 edit_account:
-    ; Check if account exists
-    call check_account_exists
-    cmp al, 0
-    je account_not_exists
+    call check_account_exists                     ; Subrutina: verificar cuenta
+    cmp al, 0                                     ; out Al == 0 | si no existe
+    je account_not_exists                         ; Salto: cuenta no existe
 
-    ; Ask for pin to edit account
-    call ask_for_pin
-    cmp al, 0
-    je cuenta_pin_store_incorrect
+    call ask_for_pin                              ; Subrutina: solicitar PIN
+    cmp al, 0                                     ; out Al == 0 | incorrecto
+    je cuenta_pin_store_incorrect                 ; Salto: PIN incorrecto
 
-    ; Prompt for account name
-    mov dx, ingresar_nombre_prompt
+    mov dx, ingresar_nombre_prompt                ; Pedir nuevo nombre
     mov ah, 9
     int 21h
 
-    ; Read account name
-    mov cx, 20 ; Max 20 characters
-    mov dx, cuenta_nombre_store
-    call store_string_to_address
+    mov cx, 20                                    ; CX = 20 | Max 20 caracteres
+    mov dx, cuenta_nombre_store                   ; DX = * Puntero al storage
+    call store_string_to_address                  ; Subrutina: Guardar entrada
 
-    ; Prompt for account PIN
-    mov dx, ingresar_pin_prompt
+    mov dx, ingresar_pin_prompt                   ; Pedir nuevo PIN
     mov ah, 9
     int 21h
 
-    ; Read account PIN
-    mov cx, 4 ; 4 digits for PIN
-    mov dx, cuenta_pin_store
-    call store_string_to_address
+    mov cx, 4                                     ; CX = 4 | 4 dígitos
+    mov dx, cuenta_pin_store                      ; DX = * Puntero al storage
+    call store_string_to_address                  ; Subrutina: Guardar entrada
 
-    ; Confirm edit success
-    mov dx, edicion_cuenta_msg
+    mov dx, edicion_cuenta_msg                    ; Mostrar mensaje de edición
     mov ah, 9
     int 21h
 
-    jmp return_to_menu
+    jmp return_to_menu                            ; Salto: volver al menú
 
+;-------------------------------------------------
+; retirar_dinero
+;
+; Retira dinero de la cuenta
+;-------------------------------------------------
 retirar_dinero:
-    ; Verificar si la cuenta existe
-    call check_account_exists
-    cmp al, 0
-    je account_not_exists
+    call check_account_exists                     ; Subrutina: verificar cuenta
+    cmp al, 0                                     ; out Al == 0 | si no existe
+    je account_not_exists                         ; Salto: cuenta no existe
 
-    ; Pedir PIN para depositar dinero
-    call ask_for_pin
-    cmp al, 0
-    je cuenta_pin_store_incorrect
+    call ask_for_pin                              ; Subrutina: solicitar PIN
+    cmp al, 0                                     ; out Al == 0 | incorrecto
+    je cuenta_pin_store_incorrect                 ; Salto: PIN incorrecto
 
-    ; Pedir monto a retirar
-    mov dx, retiro_prompt
+    mov dx, retiro_prompt                         ; Pedir monto a retirar
     mov ah, 9
     int 21h
 
-    ; Leer monto a retirar
-    mov cx, 5 ; Max 5 digits
-    mov dx, buffer_entrada_numero
-    call store_string_to_address
+    mov cx, 5                                     ; CX = 5 | 5 dígitos
+    mov dx, buffer_entrada_numero                 ; DX = * Puntero al buffer
+    call store_string_to_address                  ; Subrutina: Guardar entrada
 
-    mov dx, buffer_entrada_numero
+    mov si, buffer_entrada_numero                 ; SI = * Puntero buffer in
+    mov di, numero_temporal                       ; DI = * Puntero temporal out
+    call texto_a_numero                           ; Subrutina: texto a número
+
+    cmp bx, 2                                     ; BX = 2 | Overflow > 65535
+    je error_overflow_input                       ; Salto: error overflow
+
+    cmp bx, 1                                     ; BX = 1 | Carácter inválido
+    je error_char_input                           ; Salto: error carácter
+
+    clc                                           ; Limpiar bandera de acarreo
+    mov ax, [cuenta_balance_store]                ; AX = <saldo>
+    cmp ax, [numero_temporal]                     ; CMP: saldo < monto (resta)
+    jl error_insufficient_funds                   ; Salto: saldo insuficiente
+
+    sub ax, [numero_temporal]                     ; AX = AX - <monto>
+    mov [cuenta_balance_store], ax                ; <saldo> = AX | Guardar saldo
+
+    mov dx, retiro_exitoso_msg                    ; Mostrar mensaje de retiro
     mov ah, 9
     int 21h
 
-    ; Convertir el monto a número
-    mov si, buffer_entrada_numero        ; SI = * Punter al buffer de entrada
-    mov di, numero_temporal          ; DI = * Punter al número temporal
-    call texto_a_numero          ; Convertir texto a número
-    cmp bx, 2
-    je error_overflow_input
-    cmp bx, 1
-    je error_char_input
+    jmp return_to_menu                            ; Salto: volver al menú
 
-    ; Restar el monto del saldo de la cuenta
-    clc                          ; Limpiar bandera de acarreo
-    mov ax, [cuenta_balance_store]    ; Cargar saldo actual
-    cmp ax, [numero_temporal]        ; Comparar saldo con monto a retirar
-    jl error_insufficient_funds  ; Si saldo < monto, saldo insuficiente
-    sub ax, [numero_temporal]        ; Restar monto del saldo
-    mov [cuenta_balance_store], ax    ; Guardar nuevo saldo
-
-    mov dx, retiro_exitoso_msg
-    mov ah, 9
-    int 21h
-
-    jmp return_to_menu
-
+;-------------------------------------------------
+; depositar_dinero
+;
+; Deposita dinero en la cuenta
+;-------------------------------------------------
 depositar_dinero:
-    ; Verificar si la cuenta existe
-    call check_account_exists
-    cmp al, 0
-    je account_not_exists
+    call check_account_exists                     ; Subrutina: verificar cuenta
+    cmp al, 0                                     ; out Al == 0 | si no existe
+    je account_not_exists                         ; Salto: cuenta no existe
 
-    ; Pedir PIN para depositar dinero
-    call ask_for_pin
-    cmp al, 0
-    je cuenta_pin_store_incorrect
+    call ask_for_pin                              ; Subrutina: solicitar PIN
+    cmp al, 0                                     ; out Al == 0 | incorrecto
+    je cuenta_pin_store_incorrect                 ; Salto: PIN incorrecto
 
-    ; Pedir monto a depositar
-    mov dx, deposito_prompt
+    mov dx, deposito_prompt                       ; Pedir monto a depositar
     mov ah, 9
     int 21h
 
-    ; Leer monto a depositar
-    mov cx, 5 ; Max 5 digits
-    mov dx, buffer_entrada_numero
-    call store_string_to_address
+    mov cx, 5                                     ; CX = 5 | 5 dígitos
+    mov dx, buffer_entrada_numero                 ; DX = * Puntero al buffer
+    call store_string_to_address                  ; Subrutina: Guardar entrada
 
-    ; Convertir el monto a número
-    mov si, buffer_entrada_numero        ; SI = * Punter al buffer de entrada
-    mov di, numero_temporal          ; DI = * Punter al número temporal
-    call texto_a_numero          ; Convertir texto a número
-    cmp bx, 2
-    je error_overflow_input
-    cmp bx, 1
-    je error_char_input
+    mov si, buffer_entrada_numero                 ; SI = * Puntero buffer in
+    mov di, numero_temporal                       ; DI = * Puntero temporal out
+    call texto_a_numero                           ; Subrutina: texto a número
 
-    ; Sumar el monto al saldo de la cuenta
-    clc                        ; Limpiar bandera de acarreo
-    mov ax, [cuenta_balance_store]  ; Cargar saldo actual
-    add ax, [numero_temporal]      ; Sumar monto a saldo
-    jc error_no_accepted_funds ; Si hay acarreo, saldo insuficiente
+    cmp bx, 2                                     ; BX = 2 | Overflow > 65535
+    je error_overflow_input                       ; Salto: error overflow
 
-    mov [cuenta_balance_store], ax  ; Guardar nuevo saldo
-    mov dx, deposito_exitoso_msg
+    cmp bx, 1                                     ; BX = 1 | Carácter inválido
+    je error_char_input                           ; Salto: error carácter
+
+    clc                                           ; Limpiar bandera de acarreo
+    mov ax, [cuenta_balance_store]                ; AX = <saldo>
+    add ax, [numero_temporal]                     ; AX = AX + <monto>
+    jc error_no_accepted_funds                    ; Salto: error fondos | CF = 1
+
+    mov [cuenta_balance_store], ax                ; <saldo> = AX | Guardar saldo
+    mov dx, deposito_exitoso_msg                  ; Mostrar mensaje de depósito
     mov ah, 9
     int 21h
 
-    jmp return_to_menu
+    jmp return_to_menu                            ; Salto: volver al menú
 
 ; --- Utility Routines ---
 error_insufficient_funds:
