@@ -19,7 +19,7 @@ section .data
     opt6_salir               db 10, 13, "6. Salir$"
 
     ; --- General Messages ---
-    main_title_msg           db "--- Banco en Assembly ---$"
+    titulo_banco_msg         db "--- Banco en Assembly ---$"
     menu_return              db 10, 13, "Presione <Enter> para volver al menu...$"
     imsg                     db 10, 13, "Opcion: $"
     enter_name_prompt        db 10, 13, "Ingrese el nombre de la cuenta (max 20 caracteres): $"
@@ -65,7 +65,7 @@ start:
 
 ; # region Menu Functions
 display_menu:
-    mov dx, main_title_msg
+    mov dx, titulo_banco_msg
     mov ah, 9
     int 21h
     mov dx, opt1_crear_cuenta
@@ -121,7 +121,7 @@ menu_loop:
     cmp al, 3
     je edit_account
     cmp al, 4
-    je invalid_option
+    je retirar_dinero
     cmp al, 5
     je depositar_dinero
     cmp al, 6
@@ -249,6 +249,54 @@ edit_account:
 
 	jmp return_to_menu
 
+retirar_dinero:
+    ; Verificar si la cuenta existe
+    call check_account_exists
+    cmp al, 0
+    je account_not_exists
+
+    ; Pedir PIN para depositar dinero
+    call ask_for_pin
+    cmp al, 0
+    je account_pin_incorrect
+
+    ; Pedir monto a retirar
+    mov dx, enter_withdraw_prompt
+    mov ah, 9
+    int 21h
+
+    ; Leer monto a retirar
+    mov cx, 5 ; Max 5 digits
+    mov dx, number_buffer
+    call store_string_to_address
+
+    mov dx, number_buffer
+    mov ah, 9
+    int 21h
+
+    ; Convertir el monto a número
+    mov si, number_buffer        ; SI = * Punter al buffer de entrada
+    mov di, temp_number          ; DI = * Punter al número temporal
+    call texto_a_numero          ; Convertir texto a número
+    cmp bx, 2
+    je error_overflow_input
+    cmp bx, 1
+    je error_char_input
+
+    ; Restar el monto del saldo de la cuenta
+    clc                          ; Limpiar bandera de acarreo
+    mov ax, [account_balance]    ; Cargar saldo actual
+    cmp ax, [temp_number]        ; Comparar saldo con monto a retirar
+    jl error_insufficient_funds  ; Si saldo < monto, saldo insuficiente
+    sub ax, [temp_number]        ; Restar monto del saldo
+    mov [account_balance], ax    ; Guardar nuevo saldo
+
+    mov dx, withdraw_success_msg
+    mov ah, 9
+    int 21h
+
+    jmp return_to_menu
+
 depositar_dinero:
     ; Verificar si la cuenta existe
     call check_account_exists
@@ -293,6 +341,12 @@ depositar_dinero:
     jmp return_to_menu
 
 ; --- Utility Routines ---
+error_insufficient_funds:
+    mov dx, insufficient_funds_msg
+    mov ah, 9
+    int 21h
+    jmp return_to_menu
+
 error_no_accepted_funds:
     mov dx, error_no_accepted_funds_msg
     mov ah, 9
