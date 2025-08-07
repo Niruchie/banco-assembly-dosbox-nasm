@@ -1,69 +1,77 @@
-; This program creates a simple bank menu application for a .COM executable in DOS.
-; It uses 16-bit assembly and INT 21h for I/O operations.
-; It's a complete, commented version that addresses the logical errors
-; and missing functionality of the original code.
-
 [bits 16]
 org 0x100
-jmp start
 
 ; --- Data Section ---
-; This section stores all the messages and variables used by the program.
 section .data
     ; --- Menu Options ---
-    opt1_crear_cuenta        db 10, 13, "1. Crear cuenta$"
-    opt2_ver_detalles        db 10, 13, "2. Ver cuenta$"
-    opt3_editar              db 10, 13, "3. Editar cuenta$"
-    opt4_retirar             db 10, 13, "4. Retirar dinero$"
-    opt5_depositar           db 10, 13, "5. Depositar dinero$"
-    opt6_salir               db 10, 13, "6. Salir$"
+    opt1_crear_cuenta                             db 10, 13, "1. Crear cuenta$"
+    opt2_ver_detalles                             db 10, 13, "2. Ver cuenta$"
+    opt3_editar                                   db 10, 13, "3. Editar cuenta$"
+    opt4_retirar                                  db 10, 13, "4. Retirar dinero$"
+    opt5_depositar                                db 10, 13, "5. Depositar dinero$"
+    opt6_salir                                    db 10, 13, "6. Salir$"
 
     ; --- General Messages ---
-    titulo_banco_msg         db "--- Banco en Assembly ---$"
-    menu_return              db 10, 13, "Presione <Enter> para volver al menu...$"
-    imsg                     db 10, 13, "Opcion: $"
-    enter_name_prompt        db 10, 13, "Ingrese el nombre de la cuenta (max 20 caracteres): $"
-    enter_pin_prompt         db 10, 13, "Ingrese un PIN de 4 digitos: $"
-    account_created_msg      db 10, 13, "Cuenta creada exitosamente!$"
-    option_not_impl_msg      db 10, 13, "Funcion no implementada. Vuelva al menu.$"
-    invalid_option_msg       db 10, 13, "Opcion invalida. Intente de nuevo.$"
-    account_exists_msg       db 10, 13, "Ya existe una cuenta. No se puede crear otra.$"
-    account_not_exist_msg    db 10, 13, "No hay una cuenta creada. Intente de nuevo.$"
-    details_title_msg        db 10, 13, "--- Detalles de la cuenta ---$"
-    account_name_label       db 10, 13, "Nombre: $"
-    account_pin_label        db 10, 13, "PIN: $"
-    account_balance_label    db 10, 13, "Saldo: $"
-    dollar_sign              db "$$" ; To print the dollar symbol
-    enter_deposit_prompt     db 10, 13, "Ingrese la cantidad a depositar: $"
-    enter_withdraw_prompt    db 10, 13, "Ingrese la cantidad a retirar: $"
-    deposit_success_msg      db 10, 13, "Deposito exitoso!$"
-    withdraw_success_msg     db 10, 13, "Retiro exitoso!$"
-    insufficient_funds_msg   db 10, 13, "Saldo insuficiente.$"
-    reset_success_msg        db 10, 13, "Cuenta restablecida exitosamente!$"
-    edit_success_msg         db 10, 13, "Cuenta editada exitosamente!$"
-	pin_mismatch_msg         db 10, 13, "PIN incorrecto. Intente de nuevo.$"
-    error_overflow_input_msg db 10, 13, "Numero demasiado grande. Intente de nuevo.$"
-    error_char_input_msg     db 10, 13, "Entrada invalida. Solo se permiten digitos.$"
-    error_no_accepted_funds_msg db 10, 13, "Error: Fondos no aceptados, tienes mucho dinero.$"
+    menu_returno_msg                              db 10, 13, "Presione <Enter> para volver al menu...$"
+    titulo_banco_msg                              db "--- Banco en Assembly ---$"
+    titulo_detalles_msg                           db 10, 13, "--- Detalles de la cuenta ---$"
 
-    ; --- Account Storage ---
-    account_exists_flag      db 0       ; 0 = no account, 1 = account exists
-    account_name             times 21 db 0 ; Max 20 chars + '$' terminator
-    account_pin              times 5 db 0   ; 4 digits + '$' terminator
-    account_balance          dw 0           ; A 16-bit double word for the balance
+    option_msg                                    db 10, 13, "Opcion: $"
+    existe_cuenta_msg                             db 10, 13, "Ya existe una cuenta. No se puede crear otra.$"
+    edicion_cuenta_msg                            db 10, 13, "Cuenta editada exitosamente!$"
+    retiro_exitoso_msg                            db 10, 13, "Retiro exitoso!$"
+    reinicio_cuenta_msg                           db 10, 13, "Cuenta restablecida exitosamente!$"
+    no_existe_cuenta_msg                          db 10, 13, "No hay una cuenta creada. Intente de nuevo.$"
+    deposito_exitoso_msg                          db 10, 13, "Deposito exitoso!$"
+    saldo_insuficiente_msg                        db 10, 13, "Saldo insuficiente.$"
 
-    ; --- Temporary Variables ---
-	pin_buffer               times 5 db 0   ; Buffer for PIN input (4 digits + '$')
-    number_buffer            times 6 db 0   ; Buffer for number to str (max 5 digits + '$')
-    temp_buffer              times 21 db 0  ; Buffer for reading input (max 20 chars + '$')
-    temp_number              dw 0           ; Temporary number storage
+    error_entrada_char_msg                        db 10, 13, "Entrada invalida. Solo se permiten digitos.$"
+    error_pin_incorrecto_msg                      db 10, 13, "PIN incorrecto. Intente de nuevo.$"
+    error_entrada_overflow_msg                    db 10, 13, "Numero demasiado grande. Intente de nuevo.$"
+    error_fondos_no_aceptados_msg                 db 10, 13, "Error: Fondos no aceptados, tienes mucho dinero.$"
+
+    cuenta_pin_label                              db 10, 13, "PIN: $"
+    cuenta_balance_label                          db 10, 13, "Saldo: $"
+    cuenta_nombre_label                           db 10, 13, "Nombre: $"
+
+    retiro_prompt                                 db 10, 13, "Ingrese la cantidad a retirar: $"
+    deposito_prompt                               db 10, 13, "Ingrese la cantidad a depositar: $"
+    crear_cuenta_prompt                           db 10, 13, "Cuenta creada exitosamente!$"
+    ingresar_pin_prompt                           db 10, 13, "Ingrese un PIN de 4 digitos: $"
+    opcion_invalida_prompt                        db 10, 13, "Opcion invalida. Intente de nuevo.$"
+    ingresar_nombre_prompt                        db 10, 13, "Ingrese el nombre de la cuenta (max 20 caracteres): $"
+    no_implementado_prompt                        db 10, 13, "Funcion no implementada. Vuelva al menu.$"
+
+section .bss
+    ; --- Almacenamiento de Cuenta ---
+    cuenta_existe_flag                            db 0                          ; 0 = cuenta no existe, 1 = cuenta existente
+    cuenta_balance_store                          resw 1                        ; Palabra de 16 bits para el saldo de la cuenta
+    cuenta_nombre_store                           resb 21                       ; Máx. 20 caracteres del nombre + '$' terminador
+    cuenta_pin_store                              resb 5                        ; PIN de 4 dígitos + '$' terminador
+
+    ; --- Variables Temporales ---
+    buffer_entrada_numero                         resb 6                        ; Buffer para número (máx. 5 dígitos + '$')
+    buffer_entrada_texto                          resb 21                       ; Buffer para entrada de texto (20 caracteres + '$')
+    buffer_entrada_pin                            resb 5                        ; Buffer para PIN ingresado (4 dígitos + '$')
+    numero_temporal                               resw 1                        ; Almacenamiento temporal de número
 
 ; --- Code Section ---
 section .text
-start:
+    global _start
+
+_start:
     jmp menu_loop
 
-; # region Menu Functions
+; ------------------------------------------------
+; display_menu
+;
+; Muestra el menú principal, por medio de 
+; interrupciones de DOS.
+;
+; DX = * Puntero a la cadena a mostrar
+; AH = 09h (función de imprimir cadena de DOS)
+; INT 21h - Llamada al sistema operativo 
+; ------------------------------------------------
 display_menu:
     mov dx, titulo_banco_msg
     mov ah, 9
@@ -75,34 +83,45 @@ display_menu:
     mov ah, 9
     int 21h
     mov dx, opt3_editar
-	mov ah, 9
-	int 21h
-	mov dx, opt4_retirar
-	mov ah, 9
-	int 21h
-	mov dx, opt5_depositar
-	mov ah, 9
-	int 21h
+    mov ah, 9
+    int 21h
+    mov dx, opt4_retirar
+    mov ah, 9
+    int 21h
+    mov dx, opt5_depositar
+    mov ah, 9
+    int 21h
     mov dx, opt6_salir
     mov ah, 9
     int 21h
-    mov dx, imsg
+    mov dx, option_msg
     mov ah, 9
     int 21h
     ret
+
+;-------------------------------------------------
+; get_option
+;
+; Lee la opción del usuario
+; de la entrada estándar.
+;
+; AH = 01h (función de leer carácter de DOS)
+; INT 21h - Llamada al sistema operativo
+;-------------------------------------------------
 get_option:
-	; Read user option
     mov ah, 1
     int 21h
-    sub al, '0' ; Convert ASCII digit to number
-	ret
+    sub al, '0'                                   ; Convertir ASCII a número
+    ret
+
+
 invalid_option:
-    mov dx, invalid_option_msg
+    mov dx, opcion_invalida_prompt
     mov ah, 9
     int 21h
     jmp return_to_menu
 return_to_menu:
-    mov dx, menu_return
+    mov dx, menu_returno_msg
     mov ah, 9
     int 21h
     mov ah, 1
@@ -111,7 +130,7 @@ return_to_menu:
 menu_loop:
     call clear_screen
     call display_menu
-	call get_option
+    call get_option
     
     ; Compare with options and jump to the correct handler
     cmp al, 1
@@ -136,118 +155,118 @@ menu_loop:
 
 
 create_account:
-	; Check if account already exists
-	call check_account_exists
-	cmp al, 1
-	je account_exists
+    ; Check if account already exists
+    call check_account_exists
+    cmp al, 1
+    je account_exists
 
-	; Prompt for account name
-	mov dx, enter_name_prompt
-	mov ah, 9
-	int 21h
+    ; Prompt for account name
+    mov dx, ingresar_nombre_prompt
+    mov ah, 9
+    int 21h
 
-	; Read account name
-	mov cx, 20 ; Max 20 characters
-	mov dx, account_name
-	call store_string_to_address
+    ; Read account name
+    mov cx, 20 ; Max 20 characters
+    mov dx, cuenta_nombre_store
+    call store_string_to_address
 
-	; Prompt for account PIN
-	mov dx, enter_pin_prompt
-	mov ah, 9
-	int 21h
+    ; Prompt for account PIN
+    mov dx, ingresar_pin_prompt
+    mov ah, 9
+    int 21h
 
-	; Read account PIN
-	mov cx, 4 ; 4 digits for PIN
-	mov dx, account_pin
-	call store_string_to_address
+    ; Read account PIN
+    mov cx, 4 ; 4 digits for PIN
+    mov dx, cuenta_pin_store
+    call store_string_to_address
 
-	; Initialize account balance to 0
-	mov dword [account_balance], 0
+    ; Initialize account balance to 0
+    mov dword [cuenta_balance_store], 0
 
-	; Set account exists flag
-	call activate_account
-	jmp return_to_menu
+    ; Set account exists flag
+    call activate_account
+    jmp return_to_menu
 
 view_account:
-	; Check if account exists
-	call check_account_exists
-	cmp al, 0
-	je account_not_exists
+    ; Check if account exists
+    call check_account_exists
+    cmp al, 0
+    je account_not_exists
 
-	; Display account details
-	mov dx, details_title_msg
-	mov ah, 9
-	int 21h
+    ; Display account details
+    mov dx, titulo_detalles_msg
+    mov ah, 9
+    int 21h
 
-	; Account Name
-	mov dx, account_name_label
-	mov ah, 9
-	int 21h
+    ; Account Name
+    mov dx, cuenta_nombre_label
+    mov ah, 9
+    int 21h
 
-	mov dx, account_name
-	mov ah, 9
-	int 21h
+    mov dx, cuenta_nombre_store
+    mov ah, 9
+    int 21h
 
-	; Account PIN
-	mov dx, account_pin_label
-	mov ah, 9
-	int 21h
-	
-	mov dx, account_pin
-	mov ah, 9
-	int 21h
+    ; Account PIN
+    mov dx, cuenta_pin_label
+    mov ah, 9
+    int 21h
+    
+    mov dx, cuenta_pin_store
+    mov ah, 9
+    int 21h
 
-	; Account Balance
-	mov dx, account_balance_label
-	mov ah, 9
-	int 21h
-	
-	mov ax, [account_balance]
-	mov si, number_buffer
-	call number_to_string
-	mov dx, number_buffer
-	mov ah, 9
-	int 21h
+    ; Account Balance
+    mov dx, cuenta_balance_label
+    mov ah, 9
+    int 21h
+    
+    mov ax, [cuenta_balance_store]
+    mov si, buffer_entrada_numero
+    call number_to_string
+    mov dx, buffer_entrada_numero
+    mov ah, 9
+    int 21h
 
-	jmp return_to_menu
+    jmp return_to_menu
 
 edit_account:
-	; Check if account exists
-	call check_account_exists
-	cmp al, 0
-	je account_not_exists
+    ; Check if account exists
+    call check_account_exists
+    cmp al, 0
+    je account_not_exists
 
-	; Ask for pin to edit account
-	call ask_for_pin
-	cmp al, 0
-	je account_pin_incorrect
+    ; Ask for pin to edit account
+    call ask_for_pin
+    cmp al, 0
+    je cuenta_pin_store_incorrect
 
-	; Prompt for account name
-	mov dx, enter_name_prompt
-	mov ah, 9
-	int 21h
+    ; Prompt for account name
+    mov dx, ingresar_nombre_prompt
+    mov ah, 9
+    int 21h
 
-	; Read account name
-	mov cx, 20 ; Max 20 characters
-	mov dx, account_name
-	call store_string_to_address
+    ; Read account name
+    mov cx, 20 ; Max 20 characters
+    mov dx, cuenta_nombre_store
+    call store_string_to_address
 
-	; Prompt for account PIN
-	mov dx, enter_pin_prompt
-	mov ah, 9
-	int 21h
+    ; Prompt for account PIN
+    mov dx, ingresar_pin_prompt
+    mov ah, 9
+    int 21h
 
-	; Read account PIN
-	mov cx, 4 ; 4 digits for PIN
-	mov dx, account_pin
-	call store_string_to_address
+    ; Read account PIN
+    mov cx, 4 ; 4 digits for PIN
+    mov dx, cuenta_pin_store
+    call store_string_to_address
 
-	; Confirm edit success
-	mov dx, edit_success_msg
-	mov ah, 9
-	int 21h
+    ; Confirm edit success
+    mov dx, edicion_cuenta_msg
+    mov ah, 9
+    int 21h
 
-	jmp return_to_menu
+    jmp return_to_menu
 
 retirar_dinero:
     ; Verificar si la cuenta existe
@@ -258,25 +277,25 @@ retirar_dinero:
     ; Pedir PIN para depositar dinero
     call ask_for_pin
     cmp al, 0
-    je account_pin_incorrect
+    je cuenta_pin_store_incorrect
 
     ; Pedir monto a retirar
-    mov dx, enter_withdraw_prompt
+    mov dx, retiro_prompt
     mov ah, 9
     int 21h
 
     ; Leer monto a retirar
     mov cx, 5 ; Max 5 digits
-    mov dx, number_buffer
+    mov dx, buffer_entrada_numero
     call store_string_to_address
 
-    mov dx, number_buffer
+    mov dx, buffer_entrada_numero
     mov ah, 9
     int 21h
 
     ; Convertir el monto a número
-    mov si, number_buffer        ; SI = * Punter al buffer de entrada
-    mov di, temp_number          ; DI = * Punter al número temporal
+    mov si, buffer_entrada_numero        ; SI = * Punter al buffer de entrada
+    mov di, numero_temporal          ; DI = * Punter al número temporal
     call texto_a_numero          ; Convertir texto a número
     cmp bx, 2
     je error_overflow_input
@@ -285,13 +304,13 @@ retirar_dinero:
 
     ; Restar el monto del saldo de la cuenta
     clc                          ; Limpiar bandera de acarreo
-    mov ax, [account_balance]    ; Cargar saldo actual
-    cmp ax, [temp_number]        ; Comparar saldo con monto a retirar
+    mov ax, [cuenta_balance_store]    ; Cargar saldo actual
+    cmp ax, [numero_temporal]        ; Comparar saldo con monto a retirar
     jl error_insufficient_funds  ; Si saldo < monto, saldo insuficiente
-    sub ax, [temp_number]        ; Restar monto del saldo
-    mov [account_balance], ax    ; Guardar nuevo saldo
+    sub ax, [numero_temporal]        ; Restar monto del saldo
+    mov [cuenta_balance_store], ax    ; Guardar nuevo saldo
 
-    mov dx, withdraw_success_msg
+    mov dx, retiro_exitoso_msg
     mov ah, 9
     int 21h
 
@@ -306,21 +325,21 @@ depositar_dinero:
     ; Pedir PIN para depositar dinero
     call ask_for_pin
     cmp al, 0
-    je account_pin_incorrect
+    je cuenta_pin_store_incorrect
 
     ; Pedir monto a depositar
-    mov dx, enter_deposit_prompt
+    mov dx, deposito_prompt
     mov ah, 9
     int 21h
 
     ; Leer monto a depositar
     mov cx, 5 ; Max 5 digits
-    mov dx, number_buffer
+    mov dx, buffer_entrada_numero
     call store_string_to_address
 
     ; Convertir el monto a número
-    mov si, number_buffer        ; SI = * Punter al buffer de entrada
-    mov di, temp_number          ; DI = * Punter al número temporal
+    mov si, buffer_entrada_numero        ; SI = * Punter al buffer de entrada
+    mov di, numero_temporal          ; DI = * Punter al número temporal
     call texto_a_numero          ; Convertir texto a número
     cmp bx, 2
     je error_overflow_input
@@ -329,12 +348,12 @@ depositar_dinero:
 
     ; Sumar el monto al saldo de la cuenta
     clc                        ; Limpiar bandera de acarreo
-    mov ax, [account_balance]  ; Cargar saldo actual
-    add ax, [temp_number]      ; Sumar monto a saldo
+    mov ax, [cuenta_balance_store]  ; Cargar saldo actual
+    add ax, [numero_temporal]      ; Sumar monto a saldo
     jc error_no_accepted_funds ; Si hay acarreo, saldo insuficiente
 
-    mov [account_balance], ax  ; Guardar nuevo saldo
-    mov dx, deposit_success_msg
+    mov [cuenta_balance_store], ax  ; Guardar nuevo saldo
+    mov dx, deposito_exitoso_msg
     mov ah, 9
     int 21h
 
@@ -342,42 +361,42 @@ depositar_dinero:
 
 ; --- Utility Routines ---
 error_insufficient_funds:
-    mov dx, insufficient_funds_msg
+    mov dx, saldo_insuficiente_msg
     mov ah, 9
     int 21h
     jmp return_to_menu
 
 error_no_accepted_funds:
-    mov dx, error_no_accepted_funds_msg
+    mov dx, error_fondos_no_aceptados_msg
     mov ah, 9
     int 21h
     jmp return_to_menu
 
 error_overflow_input:
-	mov dx, error_overflow_input_msg
-	mov ah, 9
-	int 21h
-	jmp return_to_menu
+    mov dx, error_entrada_overflow_msg
+    mov ah, 9
+    int 21h
+    jmp return_to_menu
 
 error_char_input:
-    mov dx, error_char_input_msg
+    mov dx, error_entrada_char_msg
     mov ah, 9
     int 21h
     jmp return_to_menu
 
 ask_for_pin:
-	; Prompt for PIN
-	mov dx, enter_pin_prompt
-	mov ah, 9
-	int 21h
+    ; Prompt for PIN
+    mov dx, ingresar_pin_prompt
+    mov ah, 9
+    int 21h
 
-	; Read PIN
-	mov cx, 4 ; 4 digits for PIN
-	mov dx, pin_buffer
-	call store_string_to_address
+    ; Read PIN
+    mov cx, 4 ; 4 digits for PIN
+    mov dx, buffer_entrada_pin
+    call store_string_to_address
 
-    lea si, pin_buffer     ; Puntero al PIN ingresado
-    lea di, account_pin    ; Puntero al PIN almacenado
+    lea si, buffer_entrada_pin     ; Puntero al PIN ingresado
+    lea di, cuenta_pin_store    ; Puntero al PIN almacenado
 
 .compare_loop:
     lodsb                  ; Cargar byte de [SI] en AL y avanzar SI
@@ -395,32 +414,32 @@ ask_for_pin:
     mov al, 0
     ret
 
-account_pin_incorrect:
-	mov dx, pin_mismatch_msg
-	mov ah, 9
-	int 21h
-	jmp return_to_menu
+cuenta_pin_store_incorrect:
+    mov dx, error_pin_incorrecto_msg
+    mov ah, 9
+    int 21h
+    jmp return_to_menu
 account_not_exists:
-	cmp byte [account_exists_flag], 0
-	mov dx, account_not_exist_msg
-	mov ah, 9
-	int 21h
-	jmp return_to_menu
+    cmp byte [cuenta_existe_flag], 0
+    mov dx, no_existe_cuenta_msg
+    mov ah, 9
+    int 21h
+    jmp return_to_menu
 account_exists:
-	cmp byte [account_exists_flag], 1
-	mov dx, account_exists_msg
-	mov ah, 9
-	int 21h
-	jmp return_to_menu
+    cmp byte [cuenta_existe_flag], 1
+    mov dx, existe_cuenta_msg
+    mov ah, 9
+    int 21h
+    jmp return_to_menu
 activate_account:
-	mov byte [account_exists_flag], 1
-	mov dx, account_created_msg
-	mov ah, 9
-	int 21h
-	ret
+    mov byte [cuenta_existe_flag], 1
+    mov dx, crear_cuenta_prompt
+    mov ah, 9
+    int 21h
+    ret
 check_account_exists:
-	mov al, [account_exists_flag]
-	ret
+    mov al, [cuenta_existe_flag]
+    ret
 
 store_string_to_address:
     ; Store a string from the input buffer to a specific address
@@ -550,8 +569,6 @@ texto_a_numero:
     pop cx
     pop ax
     ret
-
-
 
 clear_screen:
     mov ah, 0
