@@ -326,8 +326,8 @@ retirar_dinero:
 
     clc                                           ; Limpiar bandera de acarreo
     mov ax, [cuenta_balance_store]                ; AX = <saldo>
-    cmp ax, [numero_temporal]                     ; CMP: saldo < monto (resta)
-    jl error_insufficient_funds                   ; Salto: saldo insuficiente
+    cmp ax, [numero_temporal]                     ; CMP: AX(saldo) - <monto>
+    jb error_insufficient_funds                   ; Salto: saldo insuficiente
 
     sub ax, [numero_temporal]                     ; AX = AX - <monto>
     mov [cuenta_balance_store], ax                ; <saldo> = AX | Guardar saldo
