@@ -41,6 +41,7 @@ section .data
     opcion_invalida_prompt                        db 10, 13, "Opcion invalida. Intente de nuevo.$"
     ingresar_nombre_prompt                        db 10, 13, "Ingrese el nombre de la cuenta (max 20 caracteres): $"
     no_implementado_prompt                        db 10, 13, "Funcion no implementada. Vuelva al menu.$"
+    eliminador_caracter                           db 08h, ' ', 08h, '$'
 
     ; --- Almacenamiento de Cuenta ---
     cuenta_existe_flag                            db 0                          ; 0 = cuenta no existe, 1 = cuenta existente
@@ -112,7 +113,7 @@ get_option:
     mov ah, 1                                     ; Esperar una tecla
     int 21h
     sub al, '0'                                   ; Convertir ASCII a número
-    ret
+    ret                                           ; Retornar: último call
 
 ;-------------------------------------------------
 ; invalid_option
@@ -134,14 +135,26 @@ invalid_option:
 ; para volver al menú principal.
 ;-------------------------------------------------
 return_to_menu:
-    mov dx, menu_returno_msg                      ; Imprimir mensaje de retorno
+    mov dx, menu_returno_msg                      ; Mostrar mensaje de retorno
     mov ah, 9
     int 21h
 
-    mov ah, 1                                     ; Esperar una tecla
+.wait_for_enter:
+    mov ah, 08h                                   ; Leer carácter (no mostrar)
     int 21h
 
-    jmp menu_loop                                 ; Salto: volver menú opciones
+    cmp al, 13                                    ; CMP := AL - 13 | ZF := 1
+    je menu_loop                                  ; Salto: Ir al menú (ZF(1))
+
+    mov dl, al                                    ; DL := AL
+    mov ah, 02h                                   ; Mostrar carácter
+    int 21h
+
+    mov dx, eliminador_caracter                   ; Eliminador de carácter
+    mov ah, 9                                     ; Función 09h - Imprimir
+    int 21h
+
+    jmp .wait_for_enter                           ; Salto: Esperar Enter
 
 ;-------------------------------------------------
 ; menu_loop
