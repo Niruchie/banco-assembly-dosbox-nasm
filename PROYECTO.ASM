@@ -42,13 +42,13 @@ section .data
     ingresar_nombre_prompt                        db 10, 13, "Ingrese el nombre de la cuenta (max 20 caracteres): $"
     no_implementado_prompt                        db 10, 13, "Funcion no implementada. Vuelva al menu.$"
 
-section .bss
     ; --- Almacenamiento de Cuenta ---
     cuenta_existe_flag                            db 0                          ; 0 = cuenta no existe, 1 = cuenta existente
-    cuenta_balance_store                          resw 1                        ; Palabra de 16 bits para el saldo de la cuenta
-    cuenta_nombre_store                           resb 21                       ; Máx. 20 caracteres del nombre + '$' terminador
-    cuenta_pin_store                              resb 5                        ; PIN de 4 dígitos + '$' terminador
+    cuenta_nombre_store                           times 21 db '$'               ; Máx. 20 caracteres del nombre + "$" terminador
+    cuenta_pin_store                              times 5 db '$'                ; PIN de 4 dígitos + "$" terminador
+    cuenta_balance_store                          dw 1                          ; Palabra de 16 bits para el saldo de la cuenta
 
+section .bss
     ; --- Variables Temporales ---
     buffer_entrada_numero                         resb 6                        ; Buffer para número (máx. 5 dígitos + '$')
     buffer_entrada_texto                          resb 21                       ; Buffer para entrada de texto (20 caracteres + '$')
@@ -164,6 +164,7 @@ menu_loop:
     cmp al, 5                                     ;     proceso()
     je depositar_dinero                           ;     break
     cmp al, 6                                     ; invalido()
+    je exit_program                               ;
 
     jmp invalid_option                            ; Salto: opción inválida
 
