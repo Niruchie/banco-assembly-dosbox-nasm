@@ -37,7 +37,7 @@ section .data
     retiro_prompt                                 db 10, 13, "Ingrese la cantidad a retirar: $"
     deposito_prompt                               db 10, 13, "Ingrese la cantidad a depositar: $"
     crear_cuenta_prompt                           db 10, 13, "Cuenta creada exitosamente!$"
-    ingresar_pin_prompt                           db 10, 13, "Ingrese un PIN de 4 digitos: $"
+    ingresar_pin_prompt                           db 10, 13, "Ingrese un PIN de 4 caracteres: $"
     opcion_invalida_prompt                        db 10, 13, "Opcion invalida. Intente de nuevo.$"
     ingresar_nombre_prompt                        db 10, 13, "Ingrese el nombre de la cuenta (max 20 caracteres): $"
     no_implementado_prompt                        db 10, 13, "Funcion no implementada. Vuelva al menu.$"
